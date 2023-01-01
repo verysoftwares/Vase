@@ -62,13 +62,7 @@ function move(dx)
 
 				if ir then inv_rem() end
 
-				for k,h in pairs(hidden) do
-						local hx,hy=strpos(k)
-						if h.t~=t or (y-inv_len()>hy) then
-						mset(hx,hy,h.id)
-						hidden[k]=nil
-						end
-				end
+				reveal_hidden()
 
 				if not snd then sfx(1,'E-4',22,2) end
 		elseif can_move(dx) then
@@ -84,6 +78,10 @@ function move(dx)
 								if mget(x,y-i)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then
 										ir=true
 										gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+										local connect=gates[posstr(x+dx,y-i)].connect
+										if connect then
+										gates[connect].count=gates[connect].count-1
+										end
 										sfx(2,'E-4',30,2)
 										snd=true
 								end
@@ -102,14 +100,18 @@ function move(dx)
 				if not snd then sfx(0,'E-1',6,2) end
 				if not fget(mget(x,y+1),1) then fall() end
 
-				for k,h in pairs(hidden) do
-						local hx,hy=strpos(k)
-						if h.t~=t or (y-inv_len()>hy) then
-						mset(hx,hy,h.id)
-						hidden[k]=nil
-						end
-				end
+				reveal_hidden()
 		end 	
+end
+
+function reveal_hidden()
+		for k,h in pairs(hidden) do
+				local hx,hy=strpos(k)
+				if (h.t~=t or y-inv_len()>hy) and (not fget(mget(hx,hy),2) or (mget(hx,hy)==33 and hx~=x)) then
+				mset(hx,hy,h.id)
+				hidden[k]=nil
+				end
+		end
 end
 
 function transition()
@@ -133,7 +135,7 @@ function transition()
 	
 		if clear then 
 		cur_room=rooms[2]
-		gates[posstr(8,3)].count=0
+		--gates[posstr(8,3)].count=0
 		hidden[posstr(8,3)]={id=12,t=t}
 		mset(6,6,12)
 		x=8; y=3
@@ -152,22 +154,41 @@ function fall()
 		if fget(mget(x,y-i+1),2) then mset(x,y-i+1,0) end
 		y=y+1
 
-		for k,h in pairs(hidden) do
-				local hx,hy=strpos(k)
-				if h.t~=t or (y-inv_len()>hy) then
-				mset(hx,hy,h.id)
-				hidden[k]=nil
-				end
-		end
+		reveal_hidden()
 end
 
 function update()
 
 	local oldx,oldy=x,y
 	if btnp(0) and can_jump() then 
+			local i=inv_len()
+			while fget(mget(x,y-i),2) do
+					if mget(x,y-i-1)>0 and not fget(mget(x,y-i-1),2) then
+							hidden[posstr(x,y-i-1)]={id=mget(x,y-i-1),t=t}
+					end
+					if mget(x,y-i-1)~=33 then
+					mset(x,y-i-1,mget(x,y-i))
+					end
+					i=i-1
+			end
+			--mset(x,y-i,0)
 			y=y-1
-			sfx(9,'E-5',22,2)
-			if fget(mget(x,y),3) and gates[posstr(x,y)].count==0 then 
+			local snd=false
+			if gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
+						gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
+						local connect=gates[posstr(x,y-inv_len())].connect
+						if connect then
+						gates[connect].count=gates[connect].count-1
+						end
+						sfx(2,'E-4',30,2)
+						snd=true
+						inv_rem()
+			end
+			if not snd then sfx(9,'E-5',22,2) end
+			
+			reveal_hidden()
+			
+			if gates[posstr(x,y)] and gates[posstr(x,y)].count==0 then 
 					if x==6 and y==6 then
 					rooms[1].tx=rooms[1].x-8*rooms[2].mw+64-12-6-10
 					rooms[2].x=240
@@ -198,6 +219,26 @@ function update()
 			sfx(10,'E-1',22,2)
 	end
 	if btnp(5) and can_reclaim() then
+			local g=posstr(x,y)
+			gates[g].count=gates[g].count+1
+			local connect=gates[g].connect
+			if connect then
+			gates[connect].count=gates[connect].count+1
+			end
+			
+			if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then
+					if not fget(mget(x,y+1),1) then
+							local i=1 
+							while fget(mget(x,y-i),2) do
+									mset(x,y-i+1,mget(x,y-i))
+									i=i+1
+							end
+							mset(x,y-i+1,0)
+							y=y+1
+					end
+			end
+
+			mset(x,y-inv_len()-1,gates[g].id)
 			sfx(11,'E-4',43,2)
 	end
 
@@ -294,8 +335,8 @@ rooms={
 }
 cur_room=rooms[1]
 gates={
-['6:6']={id=11,count=3},
-['8:3']={id=11,count=3},
+['6:6']={id=11,count=3,connect='8:3'},
+['8:3']={id=11,count=3,connect='6:6'},
 ['14:1']={id=11,count=6},
 ['21:3']={id=11,count=3},
 ['13:7']={id=44,count=1},
@@ -361,32 +402,43 @@ function can_move(dx)
 end
 
 function can_pickup(dx)
-		return fget(mget(x+dx,y),2)
+		return fget(mget(x+dx,y),2) and not (fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my))
 end
 
 function can_jump()
-		return fget(mget(x,y+1),1)
+		if not fget(mget(x,y+1),1) then return false end
+		if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then
+				return false
+		end
+		return true
 end
 
 function can_fall()
-		return not can_jump()
+		return not fget(mget(x,y+1),1)
 end
 
 function can_drop()
 		if inv_len()==0 then return false end
-		if not can_jump() then return false end
+		if not fget(mget(x,y+1),1) then return false end
 		local dx=1
 		if plrflip==1 then dx=-1 end
-		if mget(x+dx,y)==0 then return true end
+		if mget(x+dx,y)==0 and fget(mget(x+dx,y+1),1) then return true end
 		return false
 end
 
 function can_travel()
-		return hidden[posstr(x,y)] and hidden[posstr(x,y)].id==12
+		return hidden[posstr(x,y)] and hidden[posstr(x,y)].id==12 and gates[posstr(x,y)].count==0
 end
 
 function can_reclaim()
-		return can_travel() and gates[posstr(x,y)].count<gates[posstr(x,y)].maxcount
+		if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==12 and gates[posstr(x,y)].count<gates[posstr(x,y)].maxcount) then return false end
+		if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then
+				if not fget(mget(x,y+1),1) then
+						return true
+				end
+				return false
+		end
+		return true
 end
 
 TIC=update
