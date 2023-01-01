@@ -202,6 +202,11 @@ function transition()
 		t=t+1
 end
 
+function delay()
+		t=t+1
+		if t-dt>=64 then reset() end
+end
+
 function fall()
 		local i=1
 		while fget(mget(x,y-i),2) do
@@ -210,6 +215,16 @@ function fall()
 		end
 		if fget(mget(x,y-i+1),2) then mset(x,y-i+1,0) end
 		y=y+1
+		
+		if y>=cur_room.my+cur_room.mh then
+		local i=0
+		while fget(mget(x,y-i),2) do
+				mset(x,y-i,0)
+				i=i+1
+		end
+		sfx(12,'E-4',64,2)
+		TIC=delay; dt=t+1
+		end
 
 		reveal_hidden()
 end
@@ -247,7 +262,7 @@ function update()
 	end
 	if btnp(1) and can_fall() then
 			fall()
-			sfx(8,'E-5',16,2)
+			if y<cur_room.my+cur_room.mh then sfx(8,'E-5',16,2) end
 	end
 	if btnp(2) then move(-1) end
 	if btnp(3) then move(1)  end
@@ -396,7 +411,7 @@ function update()
 					local tw3=print(v[1],bx2+2+8+1,by+2+(j-1)*10-3,12,false,1,true)
 					if v[1]=='Get' or v[1]=='Drop' then
 							local oy2=0
-							if v.sp==11 then oy2=-1 end
+							if v.sp==11 or v.sp==61 then oy2=-1 end
 							spr(v.sp,bx2+2+8+1+tw3,by+2-4+(j-1)*10+oy2,0)
 							tw3=tw3+8
 					end
@@ -419,7 +434,9 @@ function update()
 			end
 	end
 	
+	if y<cur_room.my+cur_room.mh then
 	spr(33,cur_room.x+(x-cur_room.mx)*8,cur_room.y+(y-cur_room.my)*8,0,1,plrflip)
+	end
 	
 	local tw=print('"Hello world."',0,-6,12,false,1,true)
 	print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
@@ -663,6 +680,7 @@ TIC=update
 -- 009:000800080008000800080008000a000f0007000700070007000700070007000700070007000700070007000700070007000700070007000700070007c04000000000
 -- 010:000000000000000000000007000700070007000700000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000
 -- 011:009000df00fe00fd00ac007b004a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e4000000707
+-- 012:00070005000300040002000f0000000e000c000d000b0009000000000000000000000000000000000000000000000000000000000000000000000000b540000000b1
 -- </SFX>
 
 -- <PATTERNS>
