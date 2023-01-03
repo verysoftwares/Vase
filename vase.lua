@@ -215,6 +215,7 @@ function fall()
 		end
 		if fget(mget(x,y-i+1),2) then mset(x,y-i+1,0) end
 		y=y+1
+		if mget(x,y)>0 then hidden[posstr(x,y)]={id=mget(x,y),t=t} end
 		
 		if y>=cur_room.my+cur_room.mh then
 		local i=0
@@ -231,217 +232,237 @@ end
 
 function update()
 
-	local oldx,oldy=x,y
-	if btnp(0) and can_jump() then 
-			local i=inv_len()
-			while fget(mget(x,y-i),2) do
-					if mget(x,y-i-1)>0 and not fget(mget(x,y-i-1),2) then
-							hidden[posstr(x,y-i-1)]={id=mget(x,y-i-1),t=t}
-					end
-					if mget(x,y-i-1)~=33 then
-					mset(x,y-i-1,mget(x,y-i))
-					end
-					i=i-1
-			end
-			--mset(x,y-i,0)
-			y=y-1
-			local snd=false
-			if gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
-						gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
-						local connect=gates[posstr(x,y-inv_len())].connect
-						if connect then
-						gates[connect].count=gates[connect].count-1
+		local oldx,oldy=x,y
+		if btnp(0) and can_jump() then 
+				local i=inv_len()
+				while fget(mget(x,y-i),2) do
+						if mget(x,y-i-1)>0 and not fget(mget(x,y-i-1),2) then
+								hidden[posstr(x,y-i-1)]={id=mget(x,y-i-1),t=t}
 						end
-						sfx(2,'E-4',30,2)
-						snd=true
-						inv_rem()
-			end
-			if not snd then sfx(9,'E-5',22,2) end
-			
-			reveal_hidden()
-	end
-	if btnp(1) and can_fall() then
-			fall()
-			if y<cur_room.my+cur_room.mh then sfx(8,'E-5',16,2) end
-	end
-	if btnp(2) then move(-1) end
-	if btnp(3) then move(1)  end
-	if mget(oldx,oldy)==33 then mset(oldx,oldy,0) end
-	mset(x,y,33)
-	if btnp(4) and can_travel() then
-			local i=0
-			while fget(mget(x,y-i),2) do
-			if gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count==0 then 
-					gatey=y-i
-					if x==6 and y-i==6 then
-					rooms[1].tx=rooms[1].x-8*rooms[2].mw+64-12-6-10
-					tgt_room=rooms[2]
-					rooms[2].x=240
-					rooms[2].visited=true
-					rooms[2].tx=240-rooms[2].mw*8-64+24+6-10
-					gatetx=8; gatety=3
-					end
-					if x==21 and y-i==3 then
-					rooms[1].tx=rooms[1].x-8*12+8*3+4
-					rooms[2].tx=rooms[2].x-8*12+8*3+4
-					tgt_room=rooms[3]
-					rooms[3].x=240
-					rooms[3].visited=true
-					rooms[3].tx=240-rooms[3].mw*8-64+24+6-10
-					gatetx=23; gatety=6
-					end
-					if x==8 and y-i==3 then
-					rooms[1].tx=240/2-7*8/2
-					rooms[2].tx=240
-					tgt_room=rooms[1]
-					gatetx=6; gatety=6
-					end
-					if x==23 and y-i==6 then
-					rooms[1].tx=rooms[1].x+8*12-8*3-4
-					rooms[2].tx=rooms[2].x+8*12-8*3-4
-					rooms[3].tx=240
-					tgt_room=rooms[2]
-					gatetx=21; gatety=3
-					end
-					TIC=transition
-					sfx(7,'E-5',70,2) 
-					if mget(oldx,oldy)==33 then mset(oldx,oldy,0) end
-					mset(x,y,33)
-					TIC(); return
-			end			
-			i=i+1
-			end
-	elseif btnp(4) and can_drop() then
-			local dx=1
-			if plrflip==1 then dx=-1 end
-			local sp=mget(x,y-1)
-			inv_rem()
-			mset(x+dx,y,sp)
-			sfx(10,'E-1',22,2)
-			
-			reveal_hidden()
-	end
-	if btnp(5) and can_reclaim() then
-			--local g=posstr(x,y)
-			
-			local i=0
-			local g
-			while fget(mget(x,y-i),2) do
-			if (hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count<gates[posstr(x,y-i)].maxcount) then g=posstr(x,y-i); break end
-			i=i+1
-			end
-
-			gates[g].count=gates[g].count+1
-			local connect=gates[g].connect
-			if connect then
-			gates[connect].count=gates[connect].count+1
-			end
-			
-			if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then									
-					if not fget(mget(x,y+1),1) then
-							local i=1 
-							while fget(mget(x,y-i),2) do
-									mset(x,y-i+1,mget(x,y-i))
-									i=i+1
+						if mget(x,y-i-1)~=33 then
+						mset(x,y-i-1,mget(x,y-i))
+						end
+						i=i-1
+				end
+				--mset(x,y-i,0)
+				y=y-1
+				local snd=false
+				if gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
+							gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
+							local connect=gates[posstr(x,y-inv_len())].connect
+							if connect then
+							gates[connect].count=gates[connect].count-1
 							end
-							mset(x,y-i+1,0)
-							y=y+1
-					end
-			end
-
-			mset(x,y-inv_len()-1,gates[g].id)
-			sfx(11,'E-4',43,2)
-	end
-
-	--[[
-	if btnp(4) then zt=t; st=t end
-
-	if not zt then
-	cls(t*0.06)
-	print("HELLO WORLD!",0,0,(t-16)*0.06%16)
-	else
-	cls(zt*0.06)
-	print("HELLO WORLD!",0,0,(zt-16)*0.06%16)
-	local j=0
-	for i=math.max(0,(t-st-128)*0.25),(t-st)*0.25 do
-	for c=0,4-1 do
-	local a=j*2+t*0.08+c*2*pi/4
-	local a2=j*2+t*0.08+(c+1)*2*pi/4
-	line(x+cos(a)*(i+1)*3,y+sin(a)*(i+1)*3,x+cos(a2)*(i+1)*3,y+sin(a2)*(i+1)*3,(zt-16)*0.06%16)
-	end
-	j=j+1
-	end	
-	end
-	]]
-
-	cls(0)
-	for i,r in ipairs(rooms) do if r.visited then
-	rectb(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,5)
-	rect(r.x,r.y,r.mw*8,r.mh*8,r.c)
-	map(r.mx,r.my,r.mw,r.mh,r.x,r.y,0,1,remap)
-	end end
-
-	local sortgates={}
-	for k,g in pairs(gates) do
-			local gx,gy=strpos(k)
-			if gx>=cur_room.mx and gx<cur_room.mx+cur_room.mw and gy>=cur_room.my and gy<cur_room.my+cur_room.mh then
-					ins(sortgates,g)
-					g.x=gx; g.y=gy
-			end
-	end
-	ins(sortgates,{x=x,y=y,count=-1})
-	table.sort(sortgates,function(a,b) return a.y<b.y or (a.y==b.y and a.x>b.x) end)
-	local l,r=0,0
-	for i,g in ipairs(sortgates) do
-			local gx,gy=g.x,g.y
-			local bx,by
-			local tw=print(fmt('%dx',g.count),0,-6,12)
-			if gx<0 then bx=cur_room.x-tw-8-8; by=cur_room.y+l+3; l=l+16; line(cur_room.x+(gx-cur_room.mx)*8+4,cur_room.y+(gy-cur_room.my)*8+4,bx-2+tw+12-1,by-4+6,12)
-			else bx=cur_room.x+cur_room.mw*8+8; by=cur_room.y+r+3; if cur_room==rooms[2] then by=by-12 end; r=r+16; line(cur_room.x+(gx-cur_room.mx)*8+4,cur_room.y+(gy-cur_room.my)*8+4,bx-2,by-4+6,12) end
-			local bx2=bx-2
-			local bw=tw+12-1-1
-			if g.count==0 then bw=bw+1 end
-			local bh=16-3
-			if g.count==-1 then
-			local tw2=0
-			for j,v in ipairs(avail_actions()) do
-					local oy=0
-					if v.id>=53 and v.id<=56 then oy=-1 end
-					spr(v.id,bx2+2,by+2-4+(j-1)*10+oy,0)
-					local tw3=print(v[1],bx2+2+8+1,by+2+(j-1)*10-3,12,false,1,true)
-					if v[1]=='Get' or v[1]=='Drop' then
-							local oy2=0
-							if v.sp==11 or v.sp==61 then oy2=-1 end
-							spr(v.sp,bx2+2+8+1+tw3,by+2-4+(j-1)*10+oy2,0)
-							tw3=tw3+8
-					end
-					if tw3>tw2 then tw2=tw3 end
-					if j>1 then bh=bh+10 end
-			end
-			bw=8+tw2+4
-			bh=bh-1
-			end
-			r=r+bh-(16-3)
-			if g.count==0 then bw=bw+4; if gx<0 then bx2=bx2-4 end end
-			rectb(bx2,by-4,bw,bh,12)
-			if g.count>0 then
-			print(fmt('%dx',g.count),bx,by,12)
-			local oy=0
-			if g.id~=11 then oy=1 end
-			spr(g.id,bx+tw-1,by-3+oy,0)
-			elseif g.count==0 then
-			print('OPEN',bx2+2,by,12)
-			end
-	end
+							sfx(2,'E-4',30,2)
+							snd=true
+							inv_rem()
+				end
+				if not snd then sfx(9,'E-5',22,2) end
+				
+				reveal_hidden()
+		end
+		if btnp(1) and can_fall() then
+				fall()
+				if y<cur_room.my+cur_room.mh then sfx(8,'E-5',16,2) end
+		end
+		if btnp(2) then move(-1) end
+		if btnp(3) then move(1)  end
+		if mget(oldx,oldy)==33 then mset(oldx,oldy,0) end
+		mset(x,y,33)
+		if btnp(4) and can_travel() then
+				local i=0
+				while fget(mget(x,y-i),2) do
+				if gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count==0 then 
+						gatey=y-i
+						if x==6 and y-i==6 then
+						rooms[1].tx=rooms[1].x-8*rooms[2].mw+64-12-6-10
+						tgt_room=rooms[2]
+						rooms[2].x=240
+						rooms[2].visited=true
+						rooms[2].tx=240-rooms[2].mw*8-64+24+6-10
+						gatetx=8; gatety=3
+						end
+						if x==21 and y-i==3 then
+						rooms[1].tx=rooms[1].x-8*12+8*3+4
+						rooms[2].tx=rooms[2].x-8*12+8*3+4
+						tgt_room=rooms[3]
+						rooms[3].x=240
+						rooms[3].visited=true
+						rooms[3].tx=240-rooms[3].mw*8-64+24+6-10
+						gatetx=23; gatety=6
+						end
+						if x==8 and y-i==3 then
+						rooms[1].tx=240/2-7*8/2
+						rooms[2].tx=240
+						tgt_room=rooms[1]
+						gatetx=6; gatety=6
+						end
+						if x==23 and y-i==6 then
+						rooms[1].tx=rooms[1].x+8*12-8*3-4
+						rooms[2].tx=rooms[2].x+8*12-8*3-4
+						rooms[3].tx=240
+						tgt_room=rooms[2]
+						gatetx=21; gatety=3
+						end
+						TIC=transition
+						sfx(7,'E-5',70,2) 
+						if mget(oldx,oldy)==33 then mset(oldx,oldy,0) end
+						mset(x,y,33)
+						TIC(); return
+				end			
+				i=i+1
+				end
+		elseif btnp(4) and can_drop() then
+				local dx=1
+				if plrflip==1 then dx=-1 end
+				local sp=mget(x,y-1)
+				inv_rem()
+				mset(x+dx,y,sp)
+				sfx(10,'E-1',22,2)
+				
+				reveal_hidden()
+		end
+		if btnp(5) and can_reclaim() then
+				--local g=posstr(x,y)
+				
+				local i=0
+				local g
+				while fget(mget(x,y-i),2) do
+				if (hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count<gates[posstr(x,y-i)].maxcount) then g=posstr(x,y-i); break end
+				i=i+1
+				end
 	
-	if y<cur_room.my+cur_room.mh then
-	spr(33,cur_room.x+(x-cur_room.mx)*8,cur_room.y+(y-cur_room.my)*8,0,1,plrflip)
-	end
+				gates[g].count=gates[g].count+1
+				local connect=gates[g].connect
+				if connect then
+				gates[connect].count=gates[connect].count+1
+				end
+				
+				if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then									
+						if not fget(mget(x,y+1),1) then
+								local i=1 
+								while fget(mget(x,y-i),2) do
+										mset(x,y-i+1,mget(x,y-i))
+										i=i+1
+								end
+								mset(x,y-i+1,0)
+								y=y+1
+						end
+				end
 	
-	local tw=print('"Hello world."',0,-6,12,false,1,true)
-	print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+				mset(x,y-inv_len()-1,gates[g].id)
+				sfx(11,'E-4',43,2)
+		end
 	
-	t=t+1
+		--[[
+		if btnp(4) then zt=t; st=t end
+	
+		if not zt then
+		cls(t*0.06)
+		print("HELLO WORLD!",0,0,(t-16)*0.06%16)
+		else
+		cls(zt*0.06)
+		print("HELLO WORLD!",0,0,(zt-16)*0.06%16)
+		local j=0
+		for i=math.max(0,(t-st-128)*0.25),(t-st)*0.25 do
+		for c=0,4-1 do
+		local a=j*2+t*0.08+c*2*pi/4
+		local a2=j*2+t*0.08+(c+1)*2*pi/4
+		line(x+cos(a)*(i+1)*3,y+sin(a)*(i+1)*3,x+cos(a2)*(i+1)*3,y+sin(a2)*(i+1)*3,(zt-16)*0.06%16)
+		end
+		j=j+1
+		end	
+		end
+		]]
+	
+		cls(0)
+		for i,r in ipairs(rooms) do if r.visited then
+		rectb(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,5)
+		rect(r.x,r.y,r.mw*8,r.mh*8,r.c)
+		map(r.mx,r.my,r.mw,r.mh,r.x,r.y,0,1,remap)
+		end end
+	
+		local sortgates={}
+		for k,g in pairs(gates) do
+				local gx,gy=strpos(k)
+				if gx>=cur_room.mx and gx<cur_room.mx+cur_room.mw and gy>=cur_room.my and gy<cur_room.my+cur_room.mh then
+						ins(sortgates,g)
+						g.x=gx; g.y=gy
+				end
+		end
+		ins(sortgates,{x=x,y=y,count=-1})
+		table.sort(sortgates,function(a,b) return a.y<b.y or (a.y==b.y and a.x>b.x) end)
+		local l,r=0,0
+		for i,g in ipairs(sortgates) do
+				local gx,gy=g.x,g.y
+				local bx,by,bw,bh
+				
+				if g.count>0 then
+						local tw=print(fmt('%dx',g.count),0,-6,12)
+						bw=tw+4+8; bh=8+4
+				elseif g.count==0 then
+						local tw=print('OPEN',0,-6,12)
+						bw=tw+4; bh=6+4+1
+				elseif g.count==-1 then
+						local avail=avail_actions()
+						bw=0
+						for j,a in ipairs(avail) do
+								local aw=0
+								aw=aw+print(a[1],0,-6,12,false,1,true)
+								aw=aw+8
+								if a.sp then aw=aw+8+1 end
+								if aw>bw then bw=aw end
+						end
+						bw=bw+4; bh=#avail*9+4
+				end
+				
+				if g.x<cur_room.mx+cur_room.mw/2 then
+						bx=cur_room.x-bw-2; by=cur_room.y-2+l
+				else
+						bx=cur_room.x+cur_room.mw*8+2; by=cur_room.y-2+r
+				end
+				
+				-- we now have our bx,by,bw,bh
+				
+				line(cur_room.x+(gx-cur_room.mx)*8+4,cur_room.y+(gy-cur_room.my)*8+4,bx+bw/2,by+bh/2,12)
+				rect(bx,by,bw,bh,0)
+				rectb(bx,by,bw,bh,12)
+
+				if g.count>0 then
+						local tw=print(fmt('%dx',g.count),bx+2,by+3,12)
+						local oy=0
+						if g.id==11 or g.id==61 then oy=-1 end
+						spr(g.id,bx+2+tw,by+2+oy,0)
+				elseif g.count==0 then
+						print('OPEN',bx+2,by+3,12)
+				elseif g.count==-1 then
+						local avail=avail_actions()
+						for j,a in ipairs(avail) do
+								spr(a.id,bx+2,by+2+(j-1)*9,0)
+								local tw=print(a[1],bx+2+8+1,by+2+(j-1)*9+1,12,false,1,true)
+								if a.sp then 
+										local oy=0
+										if a.sp==11 or a.sp==61 then oy=-1 end
+										spr(a.sp,bx+2+8+tw+1,by+2+(j-1)*9+oy,0) 
+								end
+						end
+				end
+								
+				if g.x<cur_room.mx+cur_room.mw/2 then
+						l=l+bh+2
+				else
+						r=r+bh+2
+				end
+		end
+		
+		if y<cur_room.my+cur_room.mh then
+		spr(33,cur_room.x+(x-cur_room.mx)*8,cur_room.y+(y-cur_room.my)*8,0,1,plrflip)
+		end
+		
+		local tw=print('"Hello world."',0,-6,12,false,1,true)
+		print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+		
+		t=t+1
 end
 
 rooms={
@@ -629,6 +650,7 @@ TIC=update
 -- 043:6666666767777770677777706770067067700670677666706777777070000000
 -- 044:0067000000667000000076000007660000670000006670000000760000076600
 -- 045:0000000000000000555555555577776657577676577667765777777656666666
+-- 046:5000005065000560065056000065600000767000077077007070707077000770
 -- 049:000cc00000ceec000ceddec0ceddddeccccddccc00cddc0000cddc00000cc000
 -- 050:000cc000000cec000ccceec0ceeeddecceddddec0cccddc0000cdc00000cc000
 -- 051:000cc00000ceec0000cddc00cccddcccceeddeec0cddddc000cddc00000cc000
