@@ -383,14 +383,14 @@ function update()
 		end end
 	
 		local sortgates={}
-		for k,g in pairs(gates) do
+		--[[for k,g in pairs(gates) do
 				local gx,gy=strpos(k)
 				if gx>=cur_room.mx and gx<cur_room.mx+cur_room.mw and gy>=cur_room.my and gy<cur_room.my+cur_room.mh then
 						ins(sortgates,g)
 						g.x=gx; g.y=gy
 				end
-		end
-		ins(sortgates,{x=x,y=y,count=-1})
+		end]]
+		ins(sortgates,{x=cur_room.mx-1,y=cur_room.my,count=-1})
 		table.sort(sortgates,function(a,b) return a.y<b.y or (a.y==b.y and a.x>b.x) end)
 		local l,r=0,0
 		for i,g in ipairs(sortgates) do
@@ -408,12 +408,12 @@ function update()
 						bw=0
 						for j,a in ipairs(avail) do
 								local aw=0
-								aw=aw+print(a[1],0,-6,12,false,1,true)
+								aw=aw+print(a[1],0,-6,12,false,1,true)+1
 								aw=aw+8
-								if a.sp then aw=aw+8+1 end
+								if a.sp then aw=aw+8 end
 								if aw>bw then bw=aw end
 						end
-						bw=bw+4; bh=#avail*9+4
+						bw=bw+4; bh=#avail*9+4-1
 				end
 				
 				if g.x<cur_room.mx+cur_room.mw/2 then
@@ -458,6 +458,24 @@ function update()
 		if y<cur_room.my+cur_room.mh then
 		spr(33,cur_room.x+(x-cur_room.mx)*8,cur_room.y+(y-cur_room.my)*8,0,1,plrflip)
 		end
+
+		for k,g in pairs(gates) do
+				local gx,gy=strpos(k)
+				if g.count>0 and gx>=cur_room.mx and gx<cur_room.mx+cur_room.mw and gy>=cur_room.my and gy<cur_room.my+cur_room.mh then
+						if mget(gx,gy)==12 then
+						rect(cur_room.x+(gx-cur_room.mx)*8,cur_room.y+(gy-cur_room.my)*8,8,8,5)
+						shadowspr(g.id,cur_room.x+(gx-cur_room.mx)*8,cur_room.y+(gy-cur_room.my)*8)
+						end
+						if not fget(mget(gx,gy-1),2) then
+						local tw=print(g.count,0,-6)
+						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2-1,0)
+						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2+1,0)
+						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1-1,cur_room.y+(gy-cur_room.my)*8-8+2,0)
+						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1+1,cur_room.y+(gy-cur_room.my)*8-8+2,0)
+						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2,12)
+						end
+				end
+		end
 		
 		local tw=print('"Hello world."',0,-6,12,false,1,true)
 		print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
@@ -499,6 +517,18 @@ end
         --Lua will handle a string+number addition until it doesn't
         return tonumber(x),tonumber(y)
     end
+
+-- palette swapping by BORB
+		function pal(c0,c1)
+		  if(c0==nil and c1==nil)then for i=0,15 do poke4(0x3FF0*2+i,i) end 
+		  else poke4(0x3FF0*2+c0,c1) end
+		end
+
+function shadowspr(sp,spx,spy)
+		for p=0,15 do pal(p,0) end
+		spr(sp,spx,spy,0)
+		pal()
+end
 
 function remap(tile,x,y)
 		local flip=0
