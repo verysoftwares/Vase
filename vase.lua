@@ -28,13 +28,13 @@ function inv_len()
 		return i-1
 end
 
-function inv_rem()
-		local i=1
-		while fget(mget(x,y-i),2) do
-				mset(x,y-i,mget(x,y-i-1))
+function inv_rem(iy)
+		local i=0
+		while fget(mget(x,iy-i),2) do
+				mset(x,iy-i,mget(x,iy-i-1))
 				i=i+1
 		end
-		mset(x,y-i,0)
+		mset(x,iy-i,0)
 end
 
 function move(dx)
@@ -49,7 +49,7 @@ function move(dx)
 				while fget(mget(x,y-i),2) do
 						if hidden[posstr(x+dx,y-i)] and hidden[posstr(x+dx,y-i)].id==12 and gates[posstr(x+dx,y-i)].count>0 then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
-								ir=true
+								ir=y-i
 								gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
 								local connect=gates[posstr(x+dx,y-i)].connect
 								if connect then
@@ -61,7 +61,7 @@ function move(dx)
 						i=i+1
 				end
 
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 				if not snd then sfx(0,'E-1',6,2) end
 
 				reveal_hidden()
@@ -72,6 +72,18 @@ function move(dx)
 		if can_pickup(dx) then
 				if dx<0 then plrflip=1 else plrflip=0 end
 				--ins(inventory,{sp=mget(x-1,y)})
+				local oldy2=y 
+				
+				if fget(mget(x,y-inv_len()-1),1) or y-inv_len()-1<cur_room.my then
+						local i=0
+						while fget(mget(x,y-i),2) do
+								mset(x,y-i,mget(x,y-i-1))
+								i=i+1
+						end
+						mset(x,y-i,0)
+						y=y+1
+				end
+				
 				if mget(x,y-1)==61 then
 						local cx,cy=119,65
 						while mget(cx,cy)>0 do
@@ -94,8 +106,8 @@ function move(dx)
 						i=i-1
 				end
 
-				mset(x,y-1,mget(x+dx,y))
-				mset(x+dx,y,0)
+				mset(x,y-1,mget(x+dx,oldy2))
+				mset(x+dx,oldy2,0)
 
 				local i=1
 				local ir=false
@@ -108,7 +120,7 @@ function move(dx)
 								--trace(gates[posstr(x,y-i)].id)
 								if mget(x,y-i)==gates[posstr(x,y-i)].id and gates[posstr(x,y-i)].count>0 then
 										--trace('inv rem')
-										ir=true
+										ir=y-i
 										gates[posstr(x,y-i)].count=gates[posstr(x,y-i)].count-1
 										local collect=gates[posstr(x,y-i)].collect
 										if collect then gates[collect].count=gates[collect].count-1 end
@@ -119,15 +131,17 @@ function move(dx)
 						i=i+1
 				end
 
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 
 				reveal_hidden()
 
 				if not snd then sfx(1,'E-4',22,2) end
-				
+
 				if mget(x,y-1)==61 then
 						rooms[4].visited=true
 				end
+
+				if not fget(mget(x,y+1),1) then fall()	end
 		elseif can_move(dx) then
 				if dx<0 then plrflip=1 else plrflip=0 end
 				
@@ -139,7 +153,7 @@ function move(dx)
 						if fget(mget(x+dx,y-i),3) then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
 								if mget(x,y-i)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then
-										ir=true
+										ir=y-i
 										gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
 										local connect=gates[posstr(x+dx,y-i)].connect
 										if connect then
@@ -158,7 +172,7 @@ function move(dx)
 				end
 
 				x=x+dx
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 				
 				if not snd then sfx(0,'E-1',6,2) end
 				if not fget(mget(x,y+1),1) then fall() end
@@ -316,7 +330,7 @@ function update()
 							end
 							sfx(2,'E-4',30,2)
 							snd=true
-							inv_rem()
+							inv_rem(y-inv_len())
 				end
 				if not snd then sfx(9,'E-5',22,2) end
 				
@@ -385,7 +399,7 @@ function update()
 				local dx=1
 				if plrflip==1 then dx=-1 end
 				local sp=mget(x,y-1)
-				inv_rem()
+				inv_rem(y-1)
 				mset(x+dx,y,sp)
 				sfx(10,'E-1',22,2)
 				
@@ -622,16 +636,20 @@ end
 
 function avail_actions()
 		local avail={}
-
-		if can_deposit(-1) then ins(avail,{'Deposit',id=52,sp=mget(x,y-1)})
+		
+		local dpx,dpy=can_deposit(-1)
+		if dpx and dpy then ins(avail,{'Deposit',id=52,sp=mget(dpx,dpy)})
 		elseif can_turn(-1) then ins(avail,{'Turn',id=52})
-		elseif can_move(-1) then ins(avail,{'Move',id=52})
-		elseif can_pickup(-1) then ins(avail,{'Get',id=52,sp=mget(x-1,y)}) end
-		if can_deposit(1) then ins(avail,{'Deposit',id=50,sp=mget(x,y-1)})
+		elseif can_pickup(-1) then ins(avail,{'Get',id=52,sp=mget(x-1,y)}) 
+		elseif can_move(-1) then ins(avail,{'Move',id=52}) end
+		local dpx,dpy=can_deposit(1)
+		if dpx and dpy then ins(avail,{'Deposit',id=50,sp=mget(dpx,dpy)})
 		elseif can_turn(1) then ins(avail,{'Turn',id=50})
-		elseif can_move(1) then ins(avail,{'Move',id=50}) 
-		elseif can_pickup(1) then ins(avail,{'Get',id=50,sp=mget(x+1,y)}) end
-		if can_jump() then ins(avail,{'Jump',id=49}) end
+		elseif can_pickup(1) then ins(avail,{'Get',id=50,sp=mget(x+1,y)})
+		elseif can_move(1) then ins(avail,{'Move',id=50}) end
+		local dpx,dpy=can_deposit(0)
+		if dpx and dpy then ins(avail,{'Deposit',id=49,sp=mget(dpx,dpy)})
+		elseif can_jump() then ins(avail,{'Jump',id=49}) end
 		if can_fall() then ins(avail,{'Fall',id=51}) end
 		if can_travel() then ins(avail,{'Travel',id=53}) 
 		elseif can_drop() then ins(avail,{'Drop',id=53,sp=mget(x,y-1)}) end
@@ -666,10 +684,9 @@ function can_pickup(dx)
 						cx=cx-1
 						if cx==116 then cx=119; cy=cy-1; if cy<64 then return false end end
 				end
-				return true
 		end
 
-		return not (fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my))
+		return (not (fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my))) or not fget(mget(x,y+1),1)
 end
 
 function can_jump()
@@ -750,18 +767,38 @@ function can_cube()
 end
 
 function can_deposit(dx)
+		if dx==0 then
+				if can_jump() and inv_len()>0 and fget(mget(x,y-inv_len()-1),3) and gates[posstr(x,y-inv_len()-1)] and gates[posstr(x,y-inv_len()-1)].id==mget(x,y-inv_len()) then return x,y-inv_len() end
+				return false		
+		end
+		
 		local i=1
 		while fget(mget(x,y-i),2) do
-				if not can_turn(dx) and mget(x+dx,y-i)==12 and gates[posstr(x+dx,y-i)] and gates[posstr(x+dx,y-i)].id==mget(x,y-i) and gates[posstr(x+dx,y-i)].count>0 then return true end
+				if not can_turn(dx) and mget(x+dx,y-i)==12 and gates[posstr(x+dx,y-i)] and gates[posstr(x+dx,y-i)].id==mget(x,y-i) and gates[posstr(x+dx,y-i)].count>0 then 
+				
+						if mget(x,y-i)==61 then
+								local cx,cy=119,65
+								while mget(cx,cy)>0 do
+										if mget(cx,cy)==gates[posstr(x+dx,y-i)].id then return cx,cy end
+										cx=cx-1
+										if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+								end
+						else
+								return x,y-i
+						end 
+				end
 				i=i+1
 		end
+
+		--trace(y-inv_len()-1)
+		if fget(mget(x+dx,y),2) and fget(mget(x,y-inv_len()-1),3) then return x+dx,y end
 		
 		if not can_turn(dx) then return false end
 
 		local i=1
 		while fget(mget(x,y-i),2) do
 				--trace(hidden[posstr(x,y-i)],2)
-				if hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)] and gates[posstr(x,y-i)].id==mget(x,y-i) and gates[posstr(x,y-i)].count>0 then return true end
+				if hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)] and gates[posstr(x,y-i)].id==mget(x,y-i) and gates[posstr(x,y-i)].count>0 then return x,y-i end
 				i=i+1
 		end
 		
@@ -821,7 +858,8 @@ TIC=update
 
 -- <MAP>
 -- 001:0000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
--- 003:0000000000000000c00000b00000b0b00000b00000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 002:0000000000000000000000d3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 003:0000000000000000c000b0b00000b0b00000b00000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- 004:00000000000000000000b2b1b2b1b2b1b2b1b2b100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- 005:0000000000000000b1b2b1b2b1b2b1b2b1b2b1b2b1b20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- 006:000000000000c0000000c2c2b2b1b2b1b200c2c2c20000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
