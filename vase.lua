@@ -28,13 +28,15 @@ function inv_len()
 		return i-1
 end
 
-function inv_rem()
-		local i=1
-		while fget(mget(x,y-i),2) do
-				mset(x,y-i,mget(x,y-i-1))
+function inv_rem(iy)
+		local i=0
+		while fget(mget(x,iy-i),2) do
+				if fget(mget(x,iy-i-1),2) then
+				mset(x,iy-i,mget(x,iy-i-1))
+				else mset(x,iy-i,0) end
 				i=i+1
 		end
-		mset(x,y-i,0)
+		if not fget(mget(x,iy-i),3) then mset(x,iy-i,0) end
 end
 
 function move(dx)
@@ -49,19 +51,40 @@ function move(dx)
 				while fget(mget(x,y-i),2) do
 						if hidden[posstr(x+dx,y-i)] and hidden[posstr(x+dx,y-i)].id==12 and gates[posstr(x+dx,y-i)].count>0 then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
-								ir=true
-								gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
-								local connect=gates[posstr(x+dx,y-i)].connect
-								if connect then
-								gates[connect].count=gates[connect].count-1
+								if gates[posstr(x+dx,y-i)].id==mget(x,y-i) then
+										ir=y-i
+										gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+										local connect=gates[posstr(x+dx,y-i)].connect
+										if connect then
+										gates[connect].count=gates[connect].count-1
+										end
+										sfx(2,'E-4',30,2)
+										snd=true
 								end
-								sfx(2,'E-4',30,2)
-								snd=true
+								if mget(x,y-i)==61 then
+										local cx,cy=119,65
+										while mget(cx,cy)>=0 do
+												if mget(cx,cy)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then 
+														mset(cx,cy,0)
+														gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+														local connect=gates[posstr(x+dx,y-i)].connect
+														if connect then
+														gates[connect].count=gates[connect].count-1
+														end
+														sfx(2,'E-4',30,2)
+														snd=true
+														break
+												end
+												cx=cx-1
+												if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+										end
+								end
 						end
+
 						i=i+1
 				end
 
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 				if not snd then sfx(0,'E-1',6,2) end
 
 				reveal_hidden()
@@ -72,10 +95,42 @@ function move(dx)
 		if can_pickup(dx) then
 				if dx<0 then plrflip=1 else plrflip=0 end
 				--ins(inventory,{sp=mget(x-1,y)})
+				local oldy2=y 
+				
+				if mget(x,y-1)~=61 and (fget(mget(x,y-inv_len()-1),1) or y-inv_len()-1<cur_room.my) then
+						local i=0
+						while fget(mget(x,y-i),2) do
+								mset(x,y-i,mget(x,y-i-1))
+								i=i+1
+						end
+						mset(x,y-i,0)
+						y=y+1
+				end
+				
+				if mget(x,y-1)==61 then
+						local cx,cy=119,65
+						while mget(cx,cy)>0 do
+								cx=cx-1
+								if cx==116 then cx=119; cy=cy-1 end
+						end
+						mset(cx,cy,mget(x+dx,y))
+						mset(x+dx,y,0)
+						sfx(1,'E-4',22,2)
+						return
+				end
+
 				local oldy=y-inv_len()-1
 				local old=mget(x,oldy)
-				mset(x,y-inv_len()-1,mget(x+dx,y))
-				mset(x+dx,y,0)
+
+				local i=inv_len()
+				while fget(mget(x,y-i),2) and mget(x,y-i)~=33 do
+						mset(x,y-i-1,mget(x,y-i))
+						mset(x,y-i,0)
+						i=i-1
+				end
+
+				mset(x,y-1,mget(x+dx,oldy2))
+				mset(x+dx,oldy2,0)
 
 				local i=1
 				local ir=false
@@ -83,9 +138,16 @@ function move(dx)
 				while fget(mget(x,y-i),2) do
 						if y-i==oldy and fget(old,3) then
 								hidden[posstr(x,y-i)]={id=old,t=t}
+								--trace(y-i)
+								--trace(mget(x,y-i))
+								--trace(old)
+								--trace(gates[posstr(x,y-i)].id)
 								if mget(x,y-i)==gates[posstr(x,y-i)].id and gates[posstr(x,y-i)].count>0 then
-										ir=true
+										--trace('inv rem')
+										ir=y-i
 										gates[posstr(x,y-i)].count=gates[posstr(x,y-i)].count-1
+										local connect=gates[posstr(x,y-i)].connect
+										if connect then gates[connect].count=gates[connect].count-1 end
 										sfx(2,'E-4',30,2)
 										snd=true
 								end
@@ -93,11 +155,18 @@ function move(dx)
 						i=i+1
 				end
 
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 
 				reveal_hidden()
 
 				if not snd then sfx(1,'E-4',22,2) end
+
+				if mget(x,y-1)==61 and not boxget then
+						rooms[4].visited=true
+						boxget=true
+				end
+
+				if not fget(mget(x,y+1),1) then fall()	end
 		elseif can_move(dx) then
 				if dx<0 then plrflip=1 else plrflip=0 end
 				
@@ -109,7 +178,7 @@ function move(dx)
 						if fget(mget(x+dx,y-i),3) then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
 								if mget(x,y-i)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then
-										ir=true
+										ir=y-i
 										gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
 										local connect=gates[posstr(x+dx,y-i)].connect
 										if connect then
@@ -117,6 +186,24 @@ function move(dx)
 										end
 										sfx(2,'E-4',30,2)
 										snd=true
+								end
+								if mget(x,y-i)==61 then
+										local cx,cy=119,65
+										while mget(cx,cy)>=0 do
+												if mget(cx,cy)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then 
+														mset(cx,cy,0)
+														gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+														local connect=gates[posstr(x+dx,y-i)].connect
+														if connect then
+														gates[connect].count=gates[connect].count-1
+														end
+														sfx(2,'E-4',30,2)
+														snd=true
+														break
+												end
+												cx=cx-1
+												if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+										end
 								end
 						end
 						if mget(x+dx,y-i)>0 then
@@ -128,7 +215,7 @@ function move(dx)
 				end
 
 				x=x+dx
-				if ir then inv_rem() end
+				if ir then inv_rem(ir) end
 				
 				if not snd then sfx(0,'E-1',6,2) end
 				if not fget(mget(x,y+1),1) then fall() end
@@ -147,6 +234,15 @@ function reveal_hidden()
 		end
 end
 
+function draw_room(r)
+		if r.visited then
+		rect(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,0)
+		rectb(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,5)
+		rect(r.x,r.y,r.mw*8,r.mh*8,r.c)
+		map(r.mx,r.my,r.mw,r.mh,r.x,r.y,0,1,remap)
+		end
+end
+
 function transition()
 		local clear=true
 		for i,r in ipairs(rooms) do
@@ -158,16 +254,33 @@ function transition()
 						elseif r.tx>r.x then
 						r.x=r.x+3
 						if r.x>=r.tx then r.x=r.tx; r.tx=nil end
-						end
+						elseif r.tx==r.x then r.tx=nil end
+						if r.x>=240 then r.visited=false end
+				end
+				if r.ty then
+						clear=false
+						if r.ty<r.y then
+						r.y=r.y-3
+						if r.y<=r.ty then r.y=r.ty; r.ty=nil end
+						elseif r.ty>r.y then
+						r.y=r.y+3
+						if r.y>=r.ty then r.y=r.ty; r.ty=nil end
+						elseif r.ty==r.y then r.ty=nil end
+						if r.y>=136 then r.visited=false end
 				end
 		end
 
 		cls(0)
-		for i,r in ipairs(rooms) do if r.visited then
-		rectb(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,5)
-		rect(r.x,r.y,r.mw*8,r.mh*8,r.c)
-		map(r.mx,r.my,r.mw,r.mh,r.x,r.y,0,1,remap)
-		end end
+		for i,r in ipairs(rooms) do
+				if r~=rooms[4] then 
+				-- box will be drawn on top of everything
+				draw_room(r)
+				end
+		end
+	
+		mark_gates()
+		
+		draw_room(rooms[4])
 	
 		if clear then 
 		local i=0
@@ -230,6 +343,22 @@ function fall()
 		reveal_hidden()
 end
 
+function box_in_room(r)
+		for gx=r.mx,r.mx+r.mw do for gy=r.my,r.my+r.mh do
+				if mget(gx,gy)==61 then return true end
+		end end
+		return false
+end
+
+function inv_has(sp)
+		local i=1
+		while fget(mget(x,y-i),2) do
+				if mget(x,y-i)==sp then return true end
+				i=i+1
+		end
+		return false
+end
+
 function update()
 
 		local oldx,oldy=x,y
@@ -247,7 +376,8 @@ function update()
 				--mset(x,y-i,0)
 				y=y-1
 				local snd=false
-				if gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
+				if inv_len()>0 and gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
+							if gates[posstr(x,y-inv_len())].id==mget(x,y-inv_len()) then
 							gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
 							local connect=gates[posstr(x,y-inv_len())].connect
 							if connect then
@@ -255,7 +385,26 @@ function update()
 							end
 							sfx(2,'E-4',30,2)
 							snd=true
-							inv_rem()
+							inv_rem(y-inv_len())
+							end
+							if mget(x,y-inv_len())==61 then
+									local cx,cy=119,65
+									while mget(cx,cy)>=0 do
+											if mget(cx,cy)==gates[posstr(x,y-inv_len())].id and gates[posstr(x,y-inv_len())].count>0 then 
+													mset(cx,cy,0)
+													gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
+													local connect=gates[posstr(x,y-inv_len())].connect
+													if connect then
+													gates[connect].count=gates[connect].count-1
+													end
+													sfx(2,'E-4',30,2)
+													snd=true
+													break
+											end
+											cx=cx-1
+											if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+									end
+							end
 				end
 				if not snd then sfx(9,'E-5',22,2) end
 				
@@ -275,20 +424,24 @@ function update()
 				if gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count==0 then 
 						gatey=y-i
 						if x==6 and y-i==6 then
-						rooms[1].tx=rooms[1].x-8*rooms[2].mw+64-12-6-10
+						rooms[1].tx=240/2-7*8/2-8*rooms[2].mw+64-12-6-10
 						tgt_room=rooms[2]
 						rooms[2].x=240
 						rooms[2].visited=true
 						rooms[2].tx=240-rooms[2].mw*8-64+24+6-10
 						gatetx=8; gatety=3
+						if box_in_room(rooms[1]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[2]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8; rooms[1].tx=rooms[1].tx-9; rooms[2].tx=rooms[2].tx-9 end
 						end
 						if x==21 and y-i==3 then
-						rooms[1].tx=rooms[1].x-8*12+8*3+4
-						rooms[2].tx=rooms[2].x-8*12+8*3+4
+						rooms[1].tx=240/2-7*8/2-8*rooms[2].mw+64-12-6-10-8*12+8*3+4
+						rooms[2].tx=240-rooms[2].mw*8-64+24+6-10-8*12+8*3+4
 						tgt_room=rooms[3]
 						rooms[3].x=240
 						rooms[3].visited=true
 						rooms[3].tx=240-rooms[3].mw*8-64+24+6-10
+						if box_in_room(rooms[2]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[3]) and boxget or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8; rooms[1].tx=rooms[1].tx-9; rooms[2].tx=rooms[2].tx-9; rooms[3].tx=rooms[3].tx-9 end
 						gatetx=23; gatety=6
 						end
 						if x==8 and y-i==3 then
@@ -296,13 +449,38 @@ function update()
 						rooms[2].tx=240
 						tgt_room=rooms[1]
 						gatetx=6; gatety=6
+						if box_in_room(rooms[2]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[1]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-10*8 end
 						end
 						if x==23 and y-i==6 then
-						rooms[1].tx=rooms[1].x+8*12-8*3-4
-						rooms[2].tx=rooms[2].x+8*12-8*3-4
+						rooms[1].tx=240/2-7*8/2-8*rooms[2].mw+64-12-6-10-8*12+8*3+4+8*12-8*3-4
+						rooms[2].tx=240-rooms[2].mw*8-64+24+6-10-8*12+8*3+4+8*12-8*3-4
 						rooms[3].tx=240
 						tgt_room=rooms[2]
 						gatetx=21; gatety=3
+						if box_in_room(rooms[3]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[2]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8; rooms[1].tx=rooms[1].tx-9; rooms[2].tx=rooms[2].tx-9 end
+						end
+						if x==14 and y-i==1 then
+						for i=1,3 do
+								rooms[i].ty=rooms[i].y+8*8+16-4
+						end
+						rooms[5].visited=true
+						rooms[5].ty=16
+						tgt_room=rooms[5]
+						gatetx=15; gatety=128
+						if box_in_room(rooms[2]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[5]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8 end
+						end
+						if x==15 and y-i==128 then
+						for i=1,3 do
+								rooms[i].ty=rooms[i].y-(8*8+16-4)
+						end
+						rooms[5].ty=-(8*8+16-4)
+						tgt_room=rooms[2]
+						gatetx=14; gatety=1
+						if box_in_room(rooms[5]) and not inv_has(61) then rooms[4].tx=240 end
+						if box_in_room(rooms[2]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8 end
 						end
 						TIC=transition
 						sfx(7,'E-5',70,2) 
@@ -316,12 +494,13 @@ function update()
 				local dx=1
 				if plrflip==1 then dx=-1 end
 				local sp=mget(x,y-1)
-				inv_rem()
+				inv_rem(y-1)
 				mset(x+dx,y,sp)
 				sfx(10,'E-1',22,2)
 				
 				reveal_hidden()
 		end
+		
 		if btnp(5) and can_reclaim() then
 				--local g=posstr(x,y)
 				
@@ -331,6 +510,8 @@ function update()
 				if (hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count<gates[posstr(x,y-i)].maxcount) then g=posstr(x,y-i); break end
 				i=i+1
 				end
+				
+				if not g then return end
 	
 				gates[g].count=gates[g].count+1
 				local connect=gates[g].connect
@@ -352,6 +533,8 @@ function update()
 	
 				mset(x,y-inv_len()-1,gates[g].id)
 				sfx(11,'E-4',43,2)
+		elseif btnp(5) and can_cube() then
+				
 		end
 	
 		--[[
@@ -376,12 +559,21 @@ function update()
 		]]
 	
 		cls(0)
-		for i,r in ipairs(rooms) do if r.visited then
-		rectb(r.x-4,r.y-4,r.mw*8+2*4,r.mh*8+2*4,5)
-		rect(r.x,r.y,r.mw*8,r.mh*8,r.c)
-		map(r.mx,r.my,r.mw,r.mh,r.x,r.y,0,1,remap)
-		end end
+
+		if win then
+				local tw=print('You win!',0,-6)
+				for tx=0,240,tw+8 do for ty=0,136,7 do
+				--print('You win!',rooms[5].x+rooms[5].mw/2*8-tw/2,rooms[5].y-12,t*0.2)
+				print('You win!',tx,ty,t*0.2)
+				end end
+		end
+
+		for i,r in ipairs(rooms) do 
+				draw_room(r)
+		end
 	
+		mark_gates()
+
 		local sortgates={}
 		--[[for k,g in pairs(gates) do
 				local gx,gy=strpos(k)
@@ -458,27 +650,19 @@ function update()
 		if y<cur_room.my+cur_room.mh then
 		spr(33,cur_room.x+(x-cur_room.mx)*8,cur_room.y+(y-cur_room.my)*8,0,1,plrflip)
 		end
-
-		for k,g in pairs(gates) do
-				local gx,gy=strpos(k)
-				if g.count>0 and gx>=cur_room.mx and gx<cur_room.mx+cur_room.mw and gy>=cur_room.my and gy<cur_room.my+cur_room.mh then
-						if mget(gx,gy)==12 then
-						rect(cur_room.x+(gx-cur_room.mx)*8,cur_room.y+(gy-cur_room.my)*8,8,8,5)
-						shadowspr(g.id,cur_room.x+(gx-cur_room.mx)*8,cur_room.y+(gy-cur_room.my)*8)
-						end
-						if not fget(mget(gx,gy-1),2) then
-						local tw=print(g.count,0,-6)
-						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2-1,0)
-						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2+1,0)
-						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1-1,cur_room.y+(gy-cur_room.my)*8-8+2,0)
-						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1+1,cur_room.y+(gy-cur_room.my)*8-8+2,0)
-						print(g.count,cur_room.x+(gx-cur_room.mx)*8+4-tw/2+1,cur_room.y+(gy-cur_room.my)*8-8+2,12)
-						end
+				
+		if rooms[4].visited and rooms[4].x>240-5*8 then
+				for i=1,4 do 
+				if i==4 or (i>=1 and i<=3 and rooms[3].x>240-rooms[3].mw*8-64+24+6-10-9) then
+				rooms[i].x=rooms[i].x-3
+				end 
 				end
 		end
 		
-		local tw=print('"Hello world."',0,-6,12,false,1,true)
-		print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+		--local tw=print('"Hello world."',0,-6,12,false,1,true)
+		--print('"Hello world."',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+
+		if cur_room==rooms[5] and not win then win=true end
 		
 		t=t+1
 end
@@ -487,16 +671,19 @@ rooms={
 {mx=0,my=4,mw=7,mh=17-4,x=240/2-7*8/2,y=136/2-(17-4)*8/2,c=15,visited=true},
 {mx=7,my=1,mw=22-7+1,mh=10-1,x=240/2-10*8/2,y=136/2-(17-4)*8/2,c=8,visited=false},
 {mx=23,my=6,mw=7,mh=11,x=240,y=136/2-(17-4)*8/2+8*3,c=2,visited=false},
+{mx=116,my=64,mw=4,mh=4,x=240,y=136/2,c=1,visited=false},
+{mx=11,my=128,mw=8,mh=8,x=240/2-4*8,y=0-8*8,c=3,visited=false},
 }
 cur_room=rooms[1]
 gates={
 ['6:6']={id=11,count=3,connect='8:3'},
 ['8:3']={id=11,count=3,connect='6:6'},
-['14:1']={id=11,count=6},
+['14:1']={id=11,count=6,connect='15:128'},
 ['21:3']={id=11,count=3,connect='23:6'},
 ['13:7']={id=44,count=1},
 ['16:7']={id=11,count=1},
 ['23:6']={id=11,count=3,connect='21:3'},
+['15:128']={id=11,count=6,connect='14:1'},
 }
 for k,g in pairs(gates) do
 		g.maxcount=g.count
@@ -530,6 +717,28 @@ function shadowspr(sp,spx,spy)
 		pal()
 end
 
+function mark_gates()
+for i,r in ipairs(rooms) do	if r.visited then
+		for k,g in pairs(gates) do
+				local gx,gy=strpos(k)
+				if g.count>0 and gx>=r.mx and gx<r.mx+r.mw and gy>=r.my and gy<r.my+r.mh then
+						if mget(gx,gy)==12 then
+						rect(r.x+(gx-r.mx)*8,r.y+(gy-r.my)*8,8,8,5)
+						shadowspr(g.id,r.x+(gx-r.mx)*8,r.y+(gy-r.my)*8)
+						end
+						if not fget(mget(gx,gy-1),2) then
+						local tw=print(g.count,0,-6)
+						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2-1,0)
+						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2+1,0)
+						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1-1,r.y+(gy-r.my)*8-8+2,0)
+						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1+1,r.y+(gy-r.my)*8-8+2,0)
+						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2,12)
+						end
+				end
+		end
+		end end
+end
+
 function remap(tile,x,y)
 		local flip=0
 		if tile==12 then tile=12+t*(0.2)%4 end
@@ -539,18 +748,26 @@ end
 
 function avail_actions()
 		local avail={}
-
-		if can_turn(-1) then ins(avail,{'Turn',id=52})
-		elseif can_move(-1) then ins(avail,{'Move',id=52})
-		elseif can_pickup(-1) then ins(avail,{'Get',id=52,sp=mget(x-1,y)}) end
-		if can_turn(1) then ins(avail,{'Turn',id=50})
-		elseif can_move(1) then ins(avail,{'Move',id=50}) 
-		elseif can_pickup(1) then ins(avail,{'Get',id=50,sp=mget(x+1,y)}) end
-		if can_jump() then ins(avail,{'Jump',id=49}) end
+		
+		local dpx,dpy=can_deposit(-1)
+		if dpx and dpy then ins(avail,{'Deposit',id=52,sp=mget(dpx,dpy)})
+		elseif can_turn(-1) then ins(avail,{'Turn',id=52})
+		elseif can_pickup(-1) then ins(avail,{'Get',id=52,sp=mget(x-1,y)}) 
+		elseif can_move(-1) then ins(avail,{'Move',id=52}) end
+		local dpx,dpy=can_deposit(1)
+		if dpx and dpy then ins(avail,{'Deposit',id=50,sp=mget(dpx,dpy)})
+		elseif can_turn(1) then ins(avail,{'Turn',id=50})
+		elseif can_pickup(1) then ins(avail,{'Get',id=50,sp=mget(x+1,y)})
+		elseif can_move(1) then ins(avail,{'Move',id=50}) end
+		local dpx,dpy=can_deposit(0)
+		if dpx and dpy then ins(avail,{'Deposit',id=49,sp=mget(dpx,dpy)})
+		elseif can_jump() then ins(avail,{'Jump',id=49}) end
 		if can_fall() then ins(avail,{'Fall',id=51}) end
 		if can_travel() then ins(avail,{'Travel',id=53}) 
 		elseif can_drop() then ins(avail,{'Drop',id=53,sp=mget(x,y-1)}) end
-		if can_reclaim() then ins(avail,{'Reclaim',id=54}) end
+		if can_reclaim() then ins(avail,{'Reclaim',id=54})
+		end
+		--elseif can_cube() then ins(avail,{'Enter',id=54,sp=61}) end
 		
 		return avail
 end
@@ -572,7 +789,18 @@ function can_move(dx)
 end
 
 function can_pickup(dx)
-		return fget(mget(x+dx,y),2) and not (fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my))
+		if not fget(mget(x+dx,y),2) then return false end
+		
+		if mget(x,y-1)==61 then
+				local cx,cy=119,65
+				while mget(cx,cy)>=0 do
+						if mget(cx,cy)==0 then return true end
+						cx=cx-1
+						if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+				end
+		end
+
+		return (not (fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my))) or not fget(mget(x,y+1),1)
 end
 
 function can_jump()
@@ -610,12 +838,14 @@ function can_travel()
 		if gx==23 and gy==6 then tgt_room=rooms[3] end
 		if (gx==21 and gy==3) or (gx==8 and gy==3) then tgt_room=rooms[2] end
 		if gx==6 and gy==6 then tgt_room=rooms[1] end
+		if gx==14 and gy==1 then tgt_room=rooms[5] end
+		if gx==15 and gy==128 then tgt_room=rooms[2] end
 		local i=0
 		local offy=0
 		while i<=inv_len() do 
 				if fget(mget(gx,gy-i),1) or gy-i<tgt_room.my then
 				offy=offy+1
-				if fget(mget(gx,gy+offy),1) or gy+offy>=tgt_room.my+tgt_room.mh then return false end
+				if fget(mget(gx,gy-i+offy),1) or gy-i+offy>=tgt_room.my+tgt_room.mh then return false end
 				end
 				i=i+1
 		end
@@ -626,10 +856,10 @@ function can_reclaim()
 		local i=0
 		local overlap=false
 		while fget(mget(x,y-i),2) do
-		if (hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count<gates[posstr(x,y-i)].maxcount) then overlap=true; break end
+		if (hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count+1<=gates[posstr(x,y-i)].maxcount) then overlap=true; break end
 		i=i+1
 		end
-		if not overlap then return false end
+		if not overlap or mget(x,y-i-1)==33 then return false end
 		if fget(mget(x,y-inv_len()-1),1) or (y-inv_len()-1<cur_room.my) then
 				if not fget(mget(x,y+1),1) then
 						return true
@@ -641,6 +871,75 @@ end
 
 function can_turn(tdx)
 		if tdx<0 then return plrflip==0 else return plrflip==1 end
+end
+
+function can_cube()
+		i=1
+		while fget(mget(x,y-i),2) do
+				if mget(x,y-i)==61 then return true end
+				i=i+1
+		end
+		return false
+end
+
+function can_deposit(dx)
+		if dx==0 then
+				if can_jump() and inv_len()>0 and fget(mget(x,y-inv_len()-1),3) and gates[posstr(x,y-inv_len()-1)] and gates[posstr(x,y-inv_len()-1)].count>0 then
+						if gates[posstr(x,y-inv_len()-1)].id==mget(x,y-inv_len()) then return x,y-inv_len() end
+						if mget(x,y-inv_len())==61 then
+								local cx,cy=119,65
+								while mget(cx,cy)>=0 do
+										if mget(cx,cy)==gates[posstr(x,y-inv_len()-1)].id then return cx,cy end
+										cx=cx-1
+										if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+								end
+						end
+				end
+				return false		
+		end
+		
+		local i=1
+		while fget(mget(x,y-i),2) do
+				if not can_turn(dx) and mget(x+dx,y)==0 and mget(x+dx,y-i)==12 and gates[posstr(x+dx,y-i)] and gates[posstr(x+dx,y-i)].count>0 then 
+				
+						if mget(x,y-i)==61 then
+								local cx,cy=119,65
+								while mget(cx,cy)>=0 do
+										if mget(cx,cy)==gates[posstr(x+dx,y-i)].id then return cx,cy end
+										cx=cx-1
+										if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+								end
+						elseif gates[posstr(x+dx,y-i)].id==mget(x,y-i) then
+								return x,y-i
+						end 
+				end
+				i=i+1
+		end
+
+		--trace(y-inv_len()-1)
+		if not can_turn(dx) and fget(mget(x+dx,y),2) and fget(mget(x,y-inv_len()-1),3) and mget(x,y-1)~=61 then return x+dx,y end
+		
+		if not can_turn(dx) then return false end
+
+		local i=1
+		while fget(mget(x,y-i),2) do
+				--trace(hidden[posstr(x,y-i)],2)
+				if hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count>0 then 
+						if mget(x,y-i)==61 then
+								local cx,cy=119,65
+								while mget(cx,cy)>=0 do
+										if mget(cx,cy)==gates[posstr(x,y-i)].id then return cx,cy end
+										cx=cx-1
+										if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+								end
+						elseif gates[posstr(x,y-i)].id==mget(x,y-i) then
+								return x,y-i
+						end 
+				end
+				i=i+1
+		end
+		
+		return false
 end
 
 TIC=update
@@ -710,6 +1009,16 @@ TIC=update
 -- 014:00b1b2b1b2b100000000000000c2b2b1c20000c200000000b2b1b2b1b200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- 015:00c2c200c2000000000000000000b1b2000000c20000000000c200c2c200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- 016:0000c200000000000000000000b1b2b1b20000c200000000000000c20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 064:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 066:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b1b2b1b2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 067:0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b2b1b2b1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 128:000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 130:000000000000000000000000b2b1b2b1b2b1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 131:00000000000000000000000000b2b1b2b100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 132:000000000000000000000000b2b1b2b1b2b1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 133:000000000000000000000000b1b2b1b2b1b2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 134:00000000000000000000000000b1b2b1b200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 135:0000000000000000000000000000b1b20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 -- </MAP>
 
 -- <WAVES>
