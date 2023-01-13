@@ -573,6 +573,17 @@ function update()
 				mset(x+dx,y,sp)
 				sfx(10,'E-1',22,2)
 				
+				if not fget(mget(x,y+1),1) then
+				fall()
+				if y<cur_room.my+cur_room.mh then 
+				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then
+				sfx(8,'E-5',16,2) 
+				else
+				sfx(0,'E-1',6,2)
+				end
+				end
+				end
+				
 				reveal_hidden()
 		end
 		
@@ -864,6 +875,7 @@ function can_move(dx)
 		if x+dx<cur_room.mx or x+dx>=cur_room.mx+cur_room.mw then return false end
 		local i=0
 		local falling=not fget(mget(x,y+1),1)
+		if falling and fget(mget(x+dx,y),1) then return false end
 		while fget(mget(x,y-i),2) do
 				if (not falling and fget(mget(x+dx,y-i),1)) and not (i==0 and falling and not fget(mget(x+dx,y-i+1),1)) then
 						return false
@@ -905,9 +917,9 @@ end
 
 function can_drop()
 		if inv_len()==0 then return false end
-		if not fget(mget(x,y+1),1) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then return false end
 		local dx=1
 		if plrflip==1 then dx=-1 end
+		if not fget(mget(x,y+1),1) and not fget(mget(x+dx,y+1),1) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then return false end
 		if mget(x+dx,y)==0 and fget(mget(x+dx,y+1),1) then return true end
 		return false
 end
@@ -1046,7 +1058,7 @@ function can_climb(dx,dy)
 end
 
 function can_chat(dx)
-		return not can_turn(dx) and mget(x+dx,y)==65
+		return not chat_msg and not can_turn(dx) and mget(x+dx,y)==65
 end
 
 TIC=update
