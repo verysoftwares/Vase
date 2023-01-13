@@ -538,7 +538,7 @@ function update()
 						end
 						if x==16 and y-i==18 then
 						for i=1,5 do
-								if i~=4 then rooms[i].ty=rooms[i].y+(8*7); rooms[i].tx=rooms[i].x+11*8 end
+								if i~=4 and rooms[i].visited then rooms[i].ty=rooms[i].y+(8*7); rooms[i].tx=rooms[i].x+11*8 end
 						end
 						rooms[6].ty=136
 						tgt_room=rooms[1]
@@ -548,7 +548,7 @@ function update()
 						end
 						if x==0 and y-i==6 then
 						for i=1,5 do
-								if i~=4 then rooms[i].ty=rooms[i].y-(8*7); rooms[i].tx=rooms[i].x-11*8 end
+								if i~=4 and rooms[i].visited then rooms[i].ty=rooms[i].y-(8*7); rooms[i].tx=rooms[i].x-11*8 end
 						end
 						rooms[6].visited=true
 						rooms[6].ty=136-(12*8-4)
