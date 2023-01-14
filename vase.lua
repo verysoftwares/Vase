@@ -16,7 +16,7 @@ sub=string.sub
 
 plrflip=0
 
-inventory={}
+--inventory={}
 
 hidden={}
 
@@ -36,7 +36,6 @@ function inv_rem(iy)
 				else mset(x,iy-i,0) end
 				i=i+1
 		end
-		if not fget(mget(x,iy-i),3) and not fget(mget(x,iy-i),1) and not fget(mget(x,iy-i),5) then mset(x,iy-i,0) end
 end
 
 function move(dx)
@@ -45,7 +44,6 @@ function move(dx)
 
 				dx=0
 				local snd=false
-				-- move inventory
 				local i=1
 				local ir=false
 				while fget(mget(x,y-i),2) do
@@ -109,14 +107,17 @@ function move(dx)
 				
 				if mget(x,y-1)==61 then
 						local cx,cy=119,65
+						local cont=false
 						while mget(cx,cy)>0 do
 								cx=cx-1
-								if cx==116 then cx=119; cy=cy-1 end
+								if cx==116 then cx=119; cy=cy-1; if cy<64 then cont=true; break end end
 						end
+						if not cont then
 						mset(cx,cy,mget(x+dx,y))
 						mset(x+dx,y,0)
 						sfx(1,'E-4',22,2)
 						return
+						end
 				end
 
 				local oldy=y-inv_len()-1
@@ -498,6 +499,7 @@ function update()
 						for i=1,3 do
 								rooms[i].ty=rooms[i].y+8*8+16-4
 						end
+						rooms[5].x=240/2-8*4
 						rooms[5].visited=true
 						rooms[5].ty=16
 						tgt_room=rooms[5]
@@ -573,7 +575,7 @@ function update()
 				mset(x+dx,y,sp)
 				sfx(10,'E-1',22,2)
 				
-				if not fget(mget(x,y+1),1) then
+				if not fget(mget(x,y+1),1) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then
 				fall()
 				if y<cur_room.my+cur_room.mh then 
 				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then
@@ -619,6 +621,12 @@ function update()
 	
 				mset(x,y-inv_len()-1,gates[g].id)
 				sfx(11,'E-4',43,2)
+				
+				if not fget(mget(x,y+1),1) then
+				fall()
+				end
+				
+				reveal_hidden()
 		elseif btnp(5) and can_cube() then
 				
 		end
@@ -946,10 +954,14 @@ function can_travel()
 		if gx==0 and gy==6 then tgt_room=rooms[1] end
 		local i=0
 		local offy=0
+		local top=gy
+		while not fget(mget(gx,top-1),1) and not (top-1<tgt_room.my) do
+				top=top-1
+		end
 		while i<=inv_len() do 
 				if fget(mget(gx,gy-i),1) or gy-i<tgt_room.my then
 				offy=offy+1
-				if fget(mget(gx,gy-i+offy),1) or gy-i+offy>=tgt_room.my+tgt_room.mh then --[[trace(gy-i+offy);]] return false end
+				if fget(mget(gx,top+offy),1) or top+offy>=tgt_room.my+tgt_room.mh then --[[trace(gy-i+offy);]] return false end
 				end
 				i=i+1
 		end
