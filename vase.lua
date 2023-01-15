@@ -60,7 +60,7 @@ function move(dx)
 										snd=true
 								end
 								if mget(x,y-i)==61 then
-										local cx,cy=119,65
+										local cx,cy=117,64
 										while mget(cx,cy)>=0 do
 												if mget(cx,cy)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then 
 														mset(cx,cy,0)
@@ -73,8 +73,8 @@ function move(dx)
 														snd=true
 														break
 												end
-												cx=cx-1
-												if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+												cx=cx+1
+												if cx==120 then cx=117; cy=cy+1; if cy>65 then break end end
 										end
 								end
 						end
@@ -191,7 +191,7 @@ function move(dx)
 										snd=true
 								end
 								if mget(x,y-i)==61 then
-										local cx,cy=119,65
+										local cx,cy=117,64
 										while mget(cx,cy)>=0 do
 												if mget(cx,cy)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then 
 														mset(cx,cy,0)
@@ -204,8 +204,8 @@ function move(dx)
 														snd=true
 														break
 												end
-												cx=cx-1
-												if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+												cx=cx+1
+												if cx==120 then cx=117; cy=cy+1; if cy>65 then break end end
 										end
 								end
 						end
@@ -409,9 +409,9 @@ function update()
 							sfx(2,'E-4',30,2)
 							snd=true
 							inv_rem(y-inv_len())
-							end
+							else
 							if mget(x,y-inv_len())==61 then
-									local cx,cy=119,65
+									local cx,cy=117,64
 									while mget(cx,cy)>=0 do
 											if mget(cx,cy)==gates[posstr(x,y-inv_len())].id and gates[posstr(x,y-inv_len())].count>0 then 
 													mset(cx,cy,0)
@@ -424,9 +424,10 @@ function update()
 													snd=true
 													break
 											end
-											cx=cx-1
-											if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+											cx=cx+1
+											if cx==120 then cx=117; cy=cy+1; if cy>65 then break end end
 									end
+							end
 							end
 				end
 				if not snd then sfx(9,'E-5',22,2) end
@@ -471,6 +472,7 @@ function update()
 						rooms[1].tx=240/2-7*8/2-8*rooms[2].mw+64-12-6-10-8*12+8*3+4
 						rooms[2].tx=240-rooms[2].mw*8-64+24+6-10-8*12+8*3+4
 						tgt_room=rooms[3]
+						rooms[3].y=136/2-(17-4)*8/2+8*3
 						rooms[3].x=240
 						rooms[3].visited=true
 						rooms[3].tx=240-rooms[3].mw*8-64+24+6-10
@@ -676,7 +678,9 @@ function update()
 						g.x=gx; g.y=gy
 				end
 		end]]
+		if TIC~=delay then
 		ins(sortgates,{x=cur_room.mx-1,y=cur_room.my,count=-1})
+		end
 		table.sort(sortgates,function(a,b) return a.y<b.y or (a.y==b.y and a.x>b.x) end)
 		local l,r=0,0
 		for i,g in ipairs(sortgates) do
@@ -882,15 +886,10 @@ end
 function can_move(dx)
 		if x+dx<cur_room.mx or x+dx>=cur_room.mx+cur_room.mw then return false end
 		local i=0
-		local falling=not fget(mget(x,y+1),1)
-		if falling and fget(mget(x+dx,y),1) then return false end
+		--local falling=not fget(mget(x,y+1),1)
+		--if falling and fget(mget(x+dx,y),1) then return false end
 		while fget(mget(x,y-i),2) do
-				if (not falling and fget(mget(x+dx,y-i),1)) and not (i==0 and falling and not fget(mget(x+dx,y-i+1),1)) then
-						return false
-				end
-				if falling and i>0 then
-						if fget(mget(x+dx,y-i+1),1) then return false end
-				end
+				if fget(mget(x+dx,y-i),1) then return false end
 				i=i+1
 		end
 		return true
@@ -946,22 +945,20 @@ function can_travel()
 		if gx==23 and gy==6 then tgt_room=rooms[3] end
 		if (gx==21 and gy==3) or (gx==8 and gy==3) then tgt_room=rooms[2] end
 		if gx==6 and gy==6 then tgt_room=rooms[1] end
-		if gx==14 and gy==1 then tgt_room=rooms[5] end
-		if gx==15 and gy==128 then tgt_room=rooms[2] end
+		if gx==14 and gy==1 then tgt_room=rooms[2] end
+		if gx==15 and gy==128 then tgt_room=rooms[5] end
 		if gx==16 and gy==7 then tgt_room=rooms[2] end
 		if gx==21 and gy==19 then tgt_room=rooms[6] end
 		if gx==16 and gy==18 then tgt_room=rooms[6] end
 		if gx==0 and gy==6 then tgt_room=rooms[1] end
 		local i=0
-		local offy=0
 		local top=gy
 		while not fget(mget(gx,top-1),1) and not (top-1<tgt_room.my) do
 				top=top-1
 		end
 		while i<=inv_len() do 
-				if fget(mget(gx,gy-i),1) or gy-i<tgt_room.my then
-				offy=offy+1
-				if fget(mget(gx,top+offy),1) or top+offy>=tgt_room.my+tgt_room.mh then --[[trace(gy-i+offy);]] return false end
+				if fget(mget(gx,top+i),1) or top+i>=tgt_room.my+tgt_room.mh then
+						return false
 				end
 				i=i+1
 		end
