@@ -314,6 +314,7 @@ function transition()
 		x=gatetx; y=gatety+offy
 		cur_room=tgt_room
 		chat_msg=nil
+		chat_t=nil
 		end
 	
 		t=t+1
@@ -435,8 +436,10 @@ function update()
 				reveal_hidden()
 		end
 		local chat=(btnp(2) and can_chat(-1)) or (btnp(3) and can_chat(1))
+		local fell=false
 		if (btnp(1) or chat) and can_fall() then
 				fall()
+				fell=true
 				if y<cur_room.my+cur_room.mh then 
 				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then
 				sfx(8,'E-5',16,2) 
@@ -445,10 +448,10 @@ function update()
 				end
 				end
 		end
-		if btnp(2) and chat then chat_msg='"The order and orientation of pickups matters."'; if can_fall() then fall() end
-		elseif btnp(2) then move(-1) end
-		if btnp(3) and chat then chat_msg='"The order and orientation of pickups matters."'
-		elseif btnp(3) then move(1) end
+		if btnp(2) and chat then chat_msg='The order and orientation of pickups matters.'; sfx(13,'E-5',#chat_msg,2); if can_fall() then fall() end
+		elseif btnp(2) and not fell then move(-1) end
+		if btnp(3) and chat then chat_msg='The order and orientation of pickups matters.'; sfx(13,'E-5',#chat_msg,2); if can_fall() then fall() end
+		elseif btnp(3) and not fell then move(1) end
 		if mget(oldx,oldy)==33 then mset(oldx,oldy,0) end
 		mset(x,y,33)
 		if btnp(4) and can_travel() then
@@ -758,8 +761,10 @@ function update()
 		end
 
 		if chat_msg then
-		  local tw=print(chat_msg,0,-6,12,false,1,true)
-		  print(chat_msg,cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+				if not chat_t then chat_t=1 end
+		  local tw=print('"'..sub(chat_msg,1,chat_t)..'"',0,-6,12,false,1,true)
+		  print('"'..sub(chat_msg,1,chat_t)..'"',cur_room.x+cur_room.mw*8/2-tw/2,cur_room.y+cur_room.mh*8+8,12,false,1,true)
+				chat_t=chat_t+1
 		end
 
 		if cur_room==rooms[5] and not win then win=true end
@@ -926,6 +931,7 @@ function can_drop()
 		if inv_len()==0 then return false end
 		local dx=1
 		if plrflip==1 then dx=-1 end
+		if x+dx>=cur_room.mx+cur_room.mw or x+dx<cur_room.mx then return false end
 		if not fget(mget(x,y+1),1) and not fget(mget(x+dx,y+1),1) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then return false end
 		if mget(x+dx,y)==0 and fget(mget(x+dx,y+1),1) then return true end
 		return false
@@ -996,6 +1002,7 @@ function can_cube()
 end
 
 function can_deposit(dx)
+		if x+dx>=cur_room.mx+cur_room.mw or x+dx<cur_room.mx then return false end
 		if dx==0 then
 				if can_jump() and inv_len()>0 and fget(mget(x,y-inv_len()-1),3) and gates[posstr(x,y-inv_len()-1)] and gates[posstr(x,y-inv_len()-1)].count>0 then
 						if gates[posstr(x,y-inv_len()-1)].id==mget(x,y-inv_len()) then return x,y-inv_len() end
@@ -1201,6 +1208,7 @@ TIC=update
 -- 010:000000000000000000000007000700070007000700000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000
 -- 011:009000df00fe00fd00ac007b004a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e4000000707
 -- 012:00070005000300040002000f0000000e000c000d000b0009000000000000000000000000000000000000000000000000000000000000000000000000b540000000b1
+-- 013:000300070007000c00080009000b0004000700060004000c000800080000000000000000000000000000000000000000000000000000000000000000c0400000000f
 -- </SFX>
 
 -- <PATTERNS>
