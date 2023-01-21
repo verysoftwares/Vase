@@ -48,7 +48,7 @@ function move(dx)
 				local snd=false
 				local i=1
 				local ir=false
-				while fget(mget(x,y-i),2) do
+				--[[while fget(mget(x,y-i),2) do
 						if hidden[posstr(x+dx,y-i)] and hidden[posstr(x+dx,y-i)].id==12 and gates[posstr(x+dx,y-i)].count>0 then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
 								if gates[posstr(x+dx,y-i)].id==mget(x,y-i) then
@@ -83,7 +83,7 @@ function move(dx)
 
 						i=i+1
 				end
-
+				]]
 				if ir then inv_rem(ir) end
 				if not snd then sfx(0,'E-1',6,2) end
 
@@ -143,6 +143,7 @@ function move(dx)
 				local i=1
 				local ir=false
 				local snd=false
+				--[[
 				while fget(mget(x,y-i),2) do
 						if y-i==oldy and fget(old,3) then
 								hidden[posstr(x,y-i)]={id=old,t=t}
@@ -162,6 +163,7 @@ function move(dx)
 						end
 						i=i+1
 				end
+				]]
 
 				if ir then inv_rem(ir) end
 
@@ -181,10 +183,9 @@ function move(dx)
 				if dx<0 then plrflip=1 else plrflip=0 end
 				
 				local snd=false
-				-- move inventory
 				local i=0
 				local ir=false
-				while fget(mget(x,y-i),2) do
+				--[[while fget(mget(x,y-i),2) do
 						if fget(mget(x+dx,y-i),3) then
 								--hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
 								if mget(x,y-i)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then
@@ -223,12 +224,22 @@ function move(dx)
 						mset(x,y-i,0)
 						i=i+1
 				end
-
+				]]
+				-- move inventory
+				while fget(mget(x,y-i),2) do
+						if mget(x+dx,y-i)>0 then
+								hidden[posstr(x+dx,y-i)]={id=mget(x+dx,y-i),t=t}
+						end
+						mset(x+dx,y-i,mget(x,y-i))
+						mset(x,y-i,0)
+						i=i+1
+				end
+				
 				x=x+dx
 				if ir then inv_rem(ir) end
 				
 				if not snd then sfx(0,'E-1',6,2) end
-				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) and not fget(mget(x,y+1),1) then fall() end
+				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) and not fget(mget(x,y+1),1) and not fget(mget(x,y+1),5) then fall() end
 
 				reveal_hidden()
 				return true
@@ -370,11 +381,19 @@ function load_room()
 		
 		for sx=cur_room.mx,cur_room.mx+cur_room.mw-1 do for sy=cur_room.my,cur_room.my+cur_room.mh-1 do
 				mset(sx,sy,save_map[posstr(sx,sy)])
-				if gates[posstr(sx,sy)] then gates[posstr(sx,sy)].count=save_gates[posstr(sx,sy)] end
+				if gates[posstr(sx,sy)] then 
+						gates[posstr(sx,sy)].count=save_gates[posstr(sx,sy)] 
+						local connect=gates[posstr(sx,sy)].connect
+						if connect then gates[connect].count=save_gates[posstr(sx,sy)] end
+				end
 		end end
 		for sx=rooms[4].mx,rooms[4].mx+rooms[4].mw-1 do for sy=rooms[4].my,rooms[4].my+rooms[4].mh-1 do
 				mset(sx,sy,save_map[posstr(sx,sy)])
-				if gates[posstr(sx,sy)] then gates[posstr(sx,sy)].count=save_gates[posstr(sx,sy)] end
+				if gates[posstr(sx,sy)] then 
+						gates[posstr(sx,sy)].count=save_gates[posstr(sx,sy)] 
+						local connect=gates[posstr(sx,sy)].connect
+						if connect then gates[connect].count=save_gates[posstr(sx,sy)] end
+				end
 		end end
 
 		hidden={}
@@ -483,7 +502,7 @@ function action()
 				mset(x,y,0)
 				y=y-1
 				local snd=false
-				if inv_len()>0 and gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
+				--[[if inv_len()>0 and gates[posstr(x,y-inv_len())] and gates[posstr(x,y-inv_len())].count>0 then
 							if gates[posstr(x,y-inv_len())].id==mget(x,y-inv_len()) then
 							gates[posstr(x,y-inv_len())].count=gates[posstr(x,y-inv_len())].count-1
 							local connect=gates[posstr(x,y-inv_len())].connect
@@ -514,6 +533,7 @@ function action()
 							end
 							end
 				end
+				]]
 				if not snd then sfx(9,'E-5',22,2) end
 				
 				reveal_hidden()
@@ -556,7 +576,53 @@ function action()
 		elseif btnp(3) then 
 				return move(1)
 		end
-		if btnp(4) and can_travel() then
+		--if btnp(4) and can_deposit() then
+		if btnp(4) and can_depositZ() then
+				local dx=0
+				local snd=false
+				local i=0
+				local ir=false
+				while fget(mget(x,y-i),2) do
+						--if fget(mget(x+dx,y-i),3) then
+						if hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)].count>0 then 
+								if mget(x,y-i)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then
+										ir=y-i
+										gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+										local connect=gates[posstr(x+dx,y-i)].connect
+										if connect then
+										gates[connect].count=gates[connect].count-1
+										end
+										sfx(2,'E-4',30,2)
+										snd=true
+								end
+								if mget(x,y-i)==61 then
+										local cx,cy=117,64
+										while mget(cx,cy)>=0 do
+												if mget(cx,cy)==gates[posstr(x+dx,y-i)].id and gates[posstr(x+dx,y-i)].count>0 then 
+														mset(cx,cy,0)
+														gates[posstr(x+dx,y-i)].count=gates[posstr(x+dx,y-i)].count-1
+														local connect=gates[posstr(x+dx,y-i)].connect
+														if connect then
+														gates[connect].count=gates[connect].count-1
+														end
+														sfx(2,'E-4',30,2)
+														snd=true
+														break
+												end
+												cx=cx+1
+												if cx==120 then cx=117; cy=cy+1; if cy>65 then break end end
+										end
+								end
+						end
+						i=i+1
+				end
+				
+				if ir then inv_rem(ir) end
+				
+				reveal_hidden()
+				
+				if not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) and not fget(mget(x,y+1),1) and not fget(mget(x,y+1),5) then fall() end	
+		elseif btnp(4) and can_travel() then
 				local i=0
 				while fget(mget(x,y-i),2) do
 				if gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count==0 then 
@@ -639,7 +705,7 @@ function action()
 						for i=1,5 do
 								if i~=4 then rooms[i].ty=rooms[i].y+(8*7) end
 						end
-						rooms[6].ty=136
+						rooms[6].ty=136+8
 						tgt_room=rooms[2]
 						gatetx=16; gatety=7
 						if box_in_room(rooms[6]) and not inv_has(61) then rooms[4].tx=240+8 end
@@ -649,7 +715,7 @@ function action()
 						for i=1,5 do
 								if i~=4 and rooms[i].visited then rooms[i].ty=rooms[i].y+(8*7); rooms[i].tx=rooms[i].x+11*8 end
 						end
-						rooms[6].ty=136
+						rooms[6].ty=136+8
 						tgt_room=rooms[1]
 						gatetx=0; gatety=6
 						if box_in_room(rooms[6]) and not inv_has(61) then rooms[4].tx=240+8 end
@@ -668,24 +734,24 @@ function action()
 						end
 						if x==17 and y-i==129 then
 						for i=1,6 do
-								if i~=4 and rooms[i].visited then rooms[i].tx=rooms[i].x-8*4+4 end
+								if i~=4 and i~=3 and rooms[i].visited then rooms[i].tx=rooms[i].x-8*4+4 end
 						end
 						rooms[7].visited=true
 						rooms[7].tx=240-8*13
 						tgt_room=rooms[7]
 						gatetx=20; gatety=129
 						if box_in_room(rooms[5]) and not inv_has(61) then rooms[4].tx=240+8 end
-						if box_in_room(rooms[7]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8 end
+						if box_in_room(rooms[7]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8; rooms[4].ty=rooms[4].y+(3*8+4-2-2) end
 						end
 						if x==20 and y-i==129 then
 						for i=1,6 do
-								if i~=4 and rooms[i].visited then rooms[i].tx=rooms[i].x+8*4-4 end
+								if i~=4 and i~=3 and rooms[i].visited then rooms[i].tx=rooms[i].x+8*4-4 end
 						end
 						rooms[7].tx=240+8
 						tgt_room=rooms[5]
 						gatetx=17; gatety=129
 						if box_in_room(rooms[7]) and not inv_has(61) then rooms[4].tx=240+8 end
-						if box_in_room(rooms[5]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8 end
+						if box_in_room(rooms[5]) or inv_has(61) then rooms[4].visited=true; rooms[4].tx=240-5*8; rooms[4].ty=rooms[4].y-(3*8+4-2-2) end
 						end
 						if x==12 and y-i==131 then
 						for i=1,6 do
@@ -856,7 +922,7 @@ function action()
 				
 				sfx(11,'E-4',43,2)
 				
-				if not yadjust and not fget(mget(x,y+1),1) then
+				if not yadjust and not fget(mget(x,y+1),1) and not fget(mget(x,y+1),5) then
 				fall()
 				end
 				
@@ -864,6 +930,21 @@ function action()
 				
 				return true
 		elseif btnp(5) and can_cut() then
+
+				local yadjust=false
+				
+				if (mget(x,y-1)~=61 or box_full()) and (fget(mget(x,y-inv_len()-1),1) or y-inv_len()-1<cur_room.my) then
+						local i=0
+						while fget(mget(x,y-i),2) and fget(mget(x,y-i-1),2) do
+								mset(x,y-i,mget(x,y-i-1)) 
+								i=i+1
+						end
+						if fget(mget(x,y-i),2) then mset(x,y-i,0) end
+						if mget(x,y+1)>0 then hidden[posstr(x,y+1)]={id=mget(x,y+1),t=t} end
+						y=y+1
+						yadjust=true
+				end
+
 				local room=true
 				if mget(x,y-1)==61 then
 						local cx,cy=119,65
@@ -885,7 +966,14 @@ function action()
 						mset(x,y-1,60)
 				end
 				sfx(14,'E-3',32,2)
-				hidden[posstr(x,y)]=nil
+				if yadjust then hidden[posstr(x,y-1)]=nil
+				else hidden[posstr(x,y)]=nil end
+
+				if not yadjust and not fget(mget(x,y+1),1) and not fget(mget(x,y+1),5) then
+				fall()
+				end
+				
+				reveal_hidden()
 				return true
 		elseif btnp(5) and can_cube() then
 				return
@@ -1147,18 +1235,25 @@ function mark_gates()
 for i,r in ipairs(rooms) do	if r.visited then
 		for k,g in pairs(gates) do
 				local gx,gy=strpos(k)
-				if g.count>0 and gx>=r.mx and gx<r.mx+r.mw and gy>=r.my and gy<r.my+r.mh then
-						if mget(gx,gy)==12 then
+				if gx>=r.mx and gx<r.mx+r.mw and gy>=r.my and gy<r.my+r.mh then
+						if mget(gx,gy)==12 and g.count>0 then
 						rect(r.x+(gx-r.mx)*8,r.y+(gy-r.my)*8,8,8,5)
 						shadowspr(g.id,r.x+(gx-r.mx)*8,r.y+(gy-r.my)*8)
 						end
 						if not fget(mget(gx,gy-1),2) then
-						local tw=print(g.count,0,-6)
-						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2-1,0)
-						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2+1,0)
-						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1-1,r.y+(gy-r.my)*8-8+2,0)
-						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1+1,r.y+(gy-r.my)*8-8+2,0)
-						print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2,12)
+						--local tw=print(g.count,0,-6)
+						--print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2-1,0)
+						--print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2+1,0)
+						--print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1-1,r.y+(gy-r.my)*8-8+2,0)
+						--print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1+1,r.y+(gy-r.my)*8-8+2,0)
+						--print(g.count,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2,12)
+						local msg=fmt('%d/%d',g.maxcount-g.count,g.maxcount)
+						local tw=print(msg,0,-6,12,false,1,true)
+						print(msg,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2-1,0,false,1,true)
+						print(msg,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2+1,0,false,1,true)
+						print(msg,r.x+(gx-r.mx)*8+4-tw/2+1-1,r.y+(gy-r.my)*8-8+2,0,false,1,true)
+						print(msg,r.x+(gx-r.mx)*8+4-tw/2+1+1,r.y+(gy-r.my)*8-8+2,0,false,1,true)
+						print(msg,r.x+(gx-r.mx)*8+4-tw/2+1,r.y+(gy-r.my)*8-8+2,12,false,1,true)
 						end
 				end
 		end
@@ -1175,27 +1270,29 @@ end
 function avail_actions()
 		local avail={}
 		
-		local dpx,dpy=can_deposit(-1)
-		if dpx and dpy then ins(avail,{'Deposit',id=52,sp=mget(dpx,dpy)})
-		elseif can_turn(-1) then ins(avail,{'Turn',id=52})
+		--local dpx,dpy=can_deposit(-1)
+		--if dpx and dpy then ins(avail,{'Deposit',id=52,sp=mget(dpx,dpy)})
+		if can_turn(-1) then ins(avail,{'Turn',id=52})
 		elseif can_chat(-1) then ins(avail,{'Chat',id=52})
 		elseif can_climb(-1,0) then ins(avail,{'Climb',id=52})
 		elseif can_pickup(-1) then ins(avail,{'Get',id=52,sp=mget(x-1,y)}) 
 		elseif can_move(-1) then ins(avail,{'Move',id=52}) end
-		local dpx,dpy=can_deposit(1)
-		if dpx and dpy then ins(avail,{'Deposit',id=50,sp=mget(dpx,dpy)})
-		elseif can_turn(1) then ins(avail,{'Turn',id=50})
+		--local dpx,dpy=can_deposit(1)
+		--if dpx and dpy then ins(avail,{'Deposit',id=50,sp=mget(dpx,dpy)})
+		if can_turn(1) then ins(avail,{'Turn',id=50})
 		elseif can_chat(1) then ins(avail,{'Chat',id=50})
 		elseif can_climb(1,0) then ins(avail,{'Climb',id=50})
 		elseif can_pickup(1) then ins(avail,{'Get',id=50,sp=mget(x+1,y)})
 		elseif can_move(1) then ins(avail,{'Move',id=50}) end
-		local dpx,dpy=can_deposit(0)
-		if dpx and dpy then ins(avail,{'Deposit',id=49,sp=mget(dpx,dpy)})
-		elseif can_climb(0,-1) then ins(avail,{'Climb',id=49})
+		--local dpx,dpy=can_deposit(0)
+		--if dpx and dpy then ins(avail,{'Deposit',id=49,sp=mget(dpx,dpy)})
+		if can_climb(0,-1) then ins(avail,{'Climb',id=49})
 		elseif can_jump() then ins(avail,{'Jump',id=49}) end
 		if can_climb(0,1) then ins(avail,{'Climb',id=51})
 		elseif can_fall() then ins(avail,{'Fall',id=51}) end
-		if can_travel() then ins(avail,{'Travel',id=53}) 
+		local dpx,dpy=can_depositZ()
+		if can_depositZ() then ins(avail,{'Deposit',id=53,sp=mget(dpx,dpy)})
+		elseif can_travel() then ins(avail,{'Travel',id=53}) 
 		elseif can_drop() then ins(avail,{'Drop',id=53,sp=next_drop()}) end
 		local gid=can_reclaim()
 		if gid then ins(avail,{'Reclaim',id=54,sp=gid})
@@ -1251,7 +1348,7 @@ function can_drop()
 		local dx=1
 		if plrflip==1 then dx=-1 end
 		if x+dx>=cur_room.mx+cur_room.mw or x+dx<cur_room.mx then return false end
-		if not fget(mget(x,y+1),1) and not fget(mget(x+dx,y+1),1) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then return false end
+		if not fget(mget(x,y+1),1) and not (fget(mget(x+dx,y+1),1) or fget(mget(x+dx,y+1),5)) and not (hidden[posstr(x,y)] and hidden[posstr(x,y)].id==44) then return false end
 		if (mget(x+dx,y)==0 or mget(x+dx,y)==12) and (fget(mget(x+dx,y+1),1) or fget(mget(x+dx,y+1),5)) then return true end
 		return false
 end
@@ -1414,6 +1511,25 @@ function can_deposit(dx)
 		return false
 end
 
+function can_depositZ()
+		local i=1
+		while fget(mget(x,y-i),2) do
+				if hidden[posstr(x,y-i)] and hidden[posstr(x,y-i)].id==12 and gates[posstr(x,y-i)] and gates[posstr(x,y-i)].count>0 then 
+						if mget(x,y-i)==61 then
+								local cx,cy=119,65
+								while mget(cx,cy)>=0 do
+										if mget(cx,cy)==gates[posstr(x,y-i)].id then return cx,cy end
+										cx=cx-1
+										if cx==116 then cx=119; cy=cy-1; if cy<64 then break end end
+								end
+						elseif gates[posstr(x,y-i)].id==mget(x,y-i) then
+								return x,y-i
+						end 
+				end
+				i=i+1
+		end
+end
+
 function box_full()
 		if mget(x,y-1)==61 then
 				local cx,cy=119,65
@@ -1443,8 +1559,13 @@ function can_chat(dx)
 end
 
 function can_cut()
-		if y-inv_len()-1<cur_room.my or fget(mget(x,y-inv_len()-1),1) then return false end
-		return inv_has(46) and hidden[posstr(x,y)] and fget(hidden[posstr(x,y)].id,5)
+		if inv_has(46) and hidden[posstr(x,y)] and fget(hidden[posstr(x,y)].id,5) then
+				if (fget(mget(x,y-inv_len()-1),1) or y-inv_len()-1<cur_room.my) then 
+						if mget(x,y-1)==61 and not box_full() then return true end
+						return not fget(mget(x,y+1),1)
+				end
+				return true
+		end
 end
 
 TIC=update
@@ -1577,10 +1698,11 @@ save_room()
 -- </MAP>
 
 -- <WAVES>
--- 000:32000023cdffffdc32000023cdffffdc
+-- 000:0123456789abcdeffedcba9876543210
 -- 001:0123456789abcdeffedcba9876543210
 -- 002:0123456789abcdef0123456789abcdef
 -- 003:356789bcdcacdeedca87543322222345
+-- 005:32000023cdffffdc32000023cdffffdc
 -- </WAVES>
 
 -- <SFX>
@@ -1598,7 +1720,7 @@ save_room()
 -- 011:009000df00fe00fd00ac007b004a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e4000000707
 -- 012:00070005000300040002000f0000000e000c000d000b0009000000000000000000000000000000000000000000000000000000000000000000000000b540000000b1
 -- 013:000300070007000c00080009000b0004000700060004000c000800080000000000000000000000000000000000000000000000000000000000000000c0400000000f
--- 014:040804080407040704080408040704070400040004000400040004000400040004000400040004000400040004000400040004000400040004000400a54000000000
+-- 014:5408a4085407a4075408a4085407a4070400040004000400040004000400040004000400040004000400040004000400040004000400040004000400a54000000000
 -- </SFX>
 
 -- <PATTERNS>
